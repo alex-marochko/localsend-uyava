@@ -27,12 +27,14 @@ import 'package:localsend_app/provider/http_provider.dart';
 import 'package:localsend_app/provider/progress_provider.dart';
 import 'package:localsend_app/provider/selection/selected_sending_files_provider.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/widget/dialogs/pin_dialog.dart';
 import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:rhttp/rhttp.dart';
 import 'package:routerino/routerino.dart';
 import 'package:uri_content/uri_content.dart';
+import 'package:uyava/uyava.dart';
 import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
@@ -48,6 +50,8 @@ final sendProvider = NotifierProvider<SendNotifier, Map<String, SendSessionState
 
 class SendNotifier extends Notifier<Map<String, SendSessionState>> {
   SendNotifier();
+
+  final Map<String, DateTime> _fileStartTimes = {};
 
   @override
   Map<String, SendSessionState> init() {
@@ -136,6 +140,16 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       state: (_) => requestState,
     );
 
+    final int totalBytes = requestState.files.values.fold<int>(0, (sum, file) => sum + file.file.size);
+    LocalSendUyava.onSendSessionCreated(
+      sessionId: sessionId,
+      target: target,
+      fileCount: requestState.files.length,
+      totalBytes: totalBytes,
+      background: background,
+      sourceRef: Uyava.caller(),
+    );
+
     if (!background) {
       // ignore: use_build_context_synchronously, unawaited_futures
       Routerino.context.push(
@@ -163,6 +177,12 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
         switch (e.statusCode) {
           case 401:
             invalidPin = true;
+            LocalSendUyava.onSendPrepareRejected(
+              sessionId: sessionId,
+              reason: 'PIN required',
+              severity: UyavaSeverity.info,
+              sourceRef: Uyava.caller(),
+            );
 
             // wait until animation is finished
             await sleepAsync(500);
@@ -184,6 +204,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
                   status: SessionStatus.canceledBySender,
                 ),
               );
+              LocalSendUyava.onSendPrepareRejected(
+                sessionId: sessionId,
+                reason: 'PIN dialog canceled',
+                sourceRef: Uyava.caller(),
+              );
               return;
             }
             break;
@@ -194,6 +219,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
                 status: SessionStatus.declined,
               ),
             );
+            LocalSendUyava.onSendPrepareRejected(
+              sessionId: sessionId,
+              reason: 'Receiver declined transfer',
+              sourceRef: Uyava.caller(),
+            );
             return;
           case 409:
             state = state.updateSession(
@@ -202,6 +232,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
                 status: SessionStatus.recipientBusy,
               ),
             );
+            LocalSendUyava.onSendPrepareRejected(
+              sessionId: sessionId,
+              reason: 'Receiver is busy',
+              sourceRef: Uyava.caller(),
+            );
             return;
           case 429:
             state = state.updateSession(
@@ -209,6 +244,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
               state: (s) => s?.copyWith(
                 status: SessionStatus.tooManyAttempts,
               ),
+            );
+            LocalSendUyava.onSendPrepareRejected(
+              sessionId: sessionId,
+              reason: 'Too many PIN attempts',
+              sourceRef: Uyava.caller(),
             );
             return;
           default:
@@ -219,6 +259,12 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
                 errorMessage: e.humanErrorMessage,
               ),
             );
+            LocalSendUyava.onSendPrepareRejected(
+              sessionId: sessionId,
+              reason: e.humanErrorMessage,
+              severity: UyavaSeverity.error,
+              sourceRef: Uyava.caller(),
+            );
             return;
         }
       } catch (e) {
@@ -228,6 +274,12 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
             status: SessionStatus.finishedWithErrors,
             errorMessage: e.humanErrorMessage,
           ),
+        );
+        LocalSendUyava.onSendPrepareRejected(
+          sessionId: sessionId,
+          reason: e.humanErrorMessage,
+          severity: UyavaSeverity.error,
+          sourceRef: Uyava.caller(),
         );
         return;
       }
@@ -269,6 +321,17 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     }
 
     if (fileMap.isEmpty) {
+      LocalSendUyava.onSendPrepareAccepted(
+        sessionId: sessionId,
+        acceptedCount: 0,
+        sourceRef: Uyava.caller(),
+      );
+      LocalSendUyava.onSendSessionFinished(
+        sessionId: sessionId,
+        success: true,
+        durationMs: null,
+        sourceRef: Uyava.caller(),
+      );
       // receiver has nothing selected
       state = state.updateSession(
         sessionId: sessionId,
@@ -285,6 +348,12 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       closeSession(sessionId);
       return;
     }
+
+    LocalSendUyava.onSendPrepareAccepted(
+      sessionId: sessionId,
+      acceptedCount: fileMap.length,
+      sourceRef: Uyava.caller(),
+    );
 
     final sendingFiles = {
       for (final file in requestState.files.values)
@@ -365,9 +434,21 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       final hasError = sessionState.files.values.any((file) => file.status == FileStatus.failed);
       if (!hasError && sessionState.background == true) {
         // close session because everything is fine and it is in background
+        final int? durationMs = sessionState.startTime != null
+            ? DateTime.now().millisecondsSinceEpoch - sessionState.startTime!
+            : null;
+        LocalSendUyava.onSendSessionFinished(
+          sessionId: sessionId,
+          success: true,
+          durationMs: durationMs,
+          sourceRef: Uyava.caller(),
+        );
         closeSession(sessionId);
         _logger.info('Transfer finished and session removed.');
       } else {
+        final int? durationMs = sessionState.startTime != null
+            ? DateTime.now().millisecondsSinceEpoch - sessionState.startTime!
+            : null;
         // keep session alive when there are errors or currently in foreground
         state = state.updateSession(
           sessionId: sessionId,
@@ -375,6 +456,13 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
             status: hasError ? SessionStatus.finishedWithErrors : SessionStatus.finished,
             endTime: DateTime.now().millisecondsSinceEpoch,
           ),
+        );
+
+        LocalSendUyava.onSendSessionFinished(
+          sessionId: sessionId,
+          success: !hasError,
+          durationMs: durationMs,
+          sourceRef: Uyava.caller(),
         );
 
         if (hasError) {
@@ -432,6 +520,14 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     state = state.updateSession(
       sessionId: sessionId,
       state: (s) => s?.withFileStatus(file.file.id, FileStatus.sending, null),
+    );
+
+    _fileStartTimes[_fileKey(sessionId, file.file.id)] = DateTime.now();
+    LocalSendUyava.onSendFileStarted(
+      sessionId: sessionId,
+      file: file.file,
+      isolateIndex: isolateIndex,
+      sourceRef: Uyava.caller(),
     );
 
     final taskResult = ref
@@ -500,6 +596,17 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       state: (s) => s?.withFileStatus(file.file.id, fileError != null ? FileStatus.failed : FileStatus.finished, fileError),
     );
 
+    final DateTime? startedAt = _fileStartTimes.remove(_fileKey(sessionId, file.file.id));
+    final int? durationMs = startedAt != null ? DateTime.now().difference(startedAt).inMilliseconds : null;
+    LocalSendUyava.onSendFileFinished(
+      sessionId: sessionId,
+      file: file.file,
+      success: fileError == null,
+      durationMs: durationMs,
+      errorMessage: fileError,
+      sourceRef: Uyava.caller(),
+    );
+
     if (isRetry) {
       final state = this.state[sessionId];
       if (state != null && state.files.values.map((e) => e.status).isFinishedOrError) {
@@ -520,6 +627,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     final remoteSessionId = sessionState.remoteSessionId;
 
     _cancelRunningRequests(sessionState);
+    LocalSendUyava.onSendSessionCanceled(
+      sessionId: sessionId,
+      reason: 'canceled_by_sender',
+      sourceRef: Uyava.caller(),
+    );
 
     // notify the receiver
     try {
@@ -542,6 +654,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       return;
     }
     _cancelRunningRequests(sessionState);
+    LocalSendUyava.onSendSessionCanceled(
+      sessionId: sessionId,
+      reason: 'canceled_by_receiver',
+      sourceRef: Uyava.caller(),
+    );
 
     state = state.updateSession(
       sessionId: sessionId,
@@ -565,12 +682,20 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     }
   }
 
+  String _fileKey(String sessionId, String fileId) => '$sessionId:$fileId';
+
+  void _clearFileTimers(String sessionId) {
+    final String prefix = '$sessionId:';
+    _fileStartTimes.removeWhere((key, value) => key.startsWith(prefix));
+  }
+
   /// Closes the session
   void closeSession(String sessionId) {
     final sessionState = state[sessionId];
     if (sessionState == null) {
       return;
     }
+    _clearFileTimers(sessionId);
     state = state.removeSession(ref, sessionId);
     if (sessionState.status == SessionStatus.finished && ref.read(settingsProvider).sendMode == SendMode.single) {
       // clear selected files

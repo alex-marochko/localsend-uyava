@@ -38,6 +38,7 @@ import 'package:localsend_app/provider/receive_history_provider.dart';
 import 'package:localsend_app/provider/selection/selected_receiving_files_provider.dart';
 import 'package:localsend_app/provider/selection/selected_sending_files_provider.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/util/native/directories.dart';
 import 'package:localsend_app/util/native/file_saver.dart';
 import 'package:localsend_app/util/native/platform_check.dart';
@@ -48,6 +49,7 @@ import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
+import 'package:uyava/uyava.dart';
 import 'package:uuid/uuid.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -58,6 +60,7 @@ final _logger = Logger('ReceiveController');
 /// Handles all requests for receiving files.
 class ReceiveController {
   final ServerUtils server;
+  final Map<String, DateTime> _fileStartTimes = {};
 
   ReceiveController(this.server);
 
@@ -266,6 +269,14 @@ class ReceiveController {
         quickSave = true;
       }
     }
+    final String senderAlias = server.getState().session?.senderAlias ?? dto.info.alias;
+    LocalSendUyava.onReceiveSessionCreated(
+      sessionId: sessionId,
+      senderAlias: senderAlias,
+      fileCount: dto.files.length,
+      quickSave: quickSave,
+      sourceRef: Uyava.caller(),
+    );
     final Map<String, String>? selection;
     if (quickSave) {
       // accept all files
@@ -351,16 +362,44 @@ class ReceiveController {
     }
 
     if (selection == null) {
+      LocalSendUyava.onReceiveDecision(
+        sessionId: sessionId,
+        accepted: false,
+        selectedCount: 0,
+        quickSave: quickSave,
+        sourceRef: Uyava.caller(),
+      );
       closeSession();
       return await request.respondJson(403, message: 'File request declined by recipient');
     }
 
     if (selection.isEmpty) {
+      LocalSendUyava.onReceiveDecision(
+        sessionId: sessionId,
+        accepted: true,
+        selectedCount: 0,
+        quickSave: quickSave,
+        sourceRef: Uyava.caller(),
+      );
+      LocalSendUyava.onReceiveSessionFinished(
+        sessionId: sessionId,
+        success: true,
+        durationMs: null,
+        sourceRef: Uyava.caller(),
+      );
       // nothing selected, send this to sender and close session
       // This usually happens for message transfers
       closeSession();
       return await request.respondJson(204);
     }
+
+    LocalSendUyava.onReceiveDecision(
+      sessionId: sessionId,
+      accepted: true,
+      selectedCount: selection.length,
+      quickSave: quickSave,
+      sourceRef: Uyava.caller(),
+    );
 
     server.setState(
       (oldState) {
@@ -389,6 +428,12 @@ class ReceiveController {
           ),
         );
       },
+    );
+
+    LocalSendUyava.onReceiveTransferStarted(
+      sessionId: sessionId,
+      selectedCount: selection.length,
+      sourceRef: Uyava.caller(),
     );
 
     if (quickSave) {
@@ -494,11 +539,18 @@ class ReceiveController {
         ),
       ),
     );
+    _fileStartTimes[_fileKey(receiveState.sessionId, fileId)] = DateTime.now();
+    LocalSendUyava.onReceiveFileStarted(
+      sessionId: receiveState.sessionId,
+      file: receivingFile.file,
+      sourceRef: Uyava.caller(),
+    );
     final fileType = receivingFile.file.fileType;
     final shouldSaveToGallery = receiveState.saveToGallery && (fileType == FileType.image || fileType == FileType.video);
 
     String? filePath;
     bool savedToGallery = false;
+    String? fileErrorMessage;
     try {
       _logger.info('Saving ${receivingFile.file.fileName}');
 
@@ -569,6 +621,7 @@ class ReceiveController {
           ),
         ),
       );
+      fileErrorMessage = e.toString();
       _logger.severe('Failed to save file', e, st);
     }
 
@@ -580,6 +633,18 @@ class ReceiveController {
           progress: 1,
         );
 
+    final DateTime? startedAt = _fileStartTimes.remove(_fileKey(receiveState.sessionId, fileId));
+    final int? durationMs = startedAt != null ? DateTime.now().difference(startedAt).inMilliseconds : null;
+    LocalSendUyava.onReceiveFileFinished(
+      sessionId: receiveState.sessionId,
+      file: receivingFile.file,
+      success: fileErrorMessage == null,
+      durationMs: durationMs,
+      filePath: filePath,
+      errorMessage: fileErrorMessage,
+      sourceRef: Uyava.caller(),
+    );
+
     final session = server.getState().session;
     if (session == null) {
       return await request.respondJson(500, message: 'Server is in invalid state');
@@ -587,6 +652,9 @@ class ReceiveController {
 
     if (allowedStates.contains(session.status) && session.files.values.map((e) => e.status).isFinishedOrError) {
       final hasError = session.files.values.any((f) => f.status == FileStatus.failed);
+      final int? durationMs = session.startTime != null
+          ? DateTime.now().millisecondsSinceEpoch - session.startTime!
+          : null;
       server.setState(
         (oldState) => oldState?.copyWith(
           session: oldState.session!.copyWith(
@@ -594,6 +662,12 @@ class ReceiveController {
             endTime: DateTime.now().millisecondsSinceEpoch,
           ),
         ),
+      );
+      LocalSendUyava.onReceiveSessionFinished(
+        sessionId: session.sessionId,
+        success: !hasError,
+        durationMs: durationMs,
+        sourceRef: Uyava.caller(),
       );
       final settings = server.ref.read(settingsProvider);
       bool quickSave = settings.quickSave && server.getState().session?.message == null;
@@ -797,6 +871,12 @@ class ReceiveController {
       return;
     }
 
+    LocalSendUyava.onReceiveSessionCanceled(
+      sessionId: session.sessionId,
+      reason: 'canceled_by_receiver',
+      sourceRef: Uyava.caller(),
+    );
+
     // notify sender
     try {
       // ignore: unawaited_futures
@@ -817,12 +897,21 @@ class ReceiveController {
       return;
     }
 
+    _clearFileTimers(sessionId);
+
     server.setState(
       (oldState) => oldState?.copyWith(
         session: null,
       ),
     );
     server.ref.notifier(progressProvider).removeSession(sessionId);
+  }
+
+  String _fileKey(String sessionId, String fileId) => '$sessionId:$fileId';
+
+  void _clearFileTimers(String sessionId) {
+    final String prefix = '$sessionId:';
+    _fileStartTimes.removeWhere((key, value) => key.startsWith(prefix));
   }
 }
 
@@ -831,6 +920,12 @@ void _cancelBySender(ServerUtils server) {
   if (receiveSession == null) {
     return;
   }
+
+  LocalSendUyava.onReceiveSessionCanceled(
+    sessionId: receiveSession.sessionId,
+    reason: 'canceled_by_sender',
+    sourceRef: Uyava.caller(),
+  );
 
   if (receiveSession.status == SessionStatus.waiting) {
     // received cancel during accept/decline

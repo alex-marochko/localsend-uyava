@@ -7,7 +7,9 @@ import 'package:localsend_app/model/persistence/favorite_device.dart';
 import 'package:localsend_app/model/state/nearby_devices_state.dart';
 import 'package:localsend_app/provider/favorites_provider.dart';
 import 'package:localsend_app/provider/logging/discovery_logs_provider.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:refena_flutter/refena_flutter.dart';
+import 'package:uyava/uyava.dart';
 
 /// This provider is responsible for:
 /// - Scanning the network for other LocalSend instances
@@ -52,6 +54,7 @@ class StartMulticastListener extends AsyncReduxAction<NearbyDevicesService, Near
     await for (final device in notifier._isolateController.state.multicastDiscovery!.receiveFromIsolate) {
       await dispatchAsync(RegisterDeviceAction(device));
       notifier._discoveryLogger.addLog('[DISCOVER/UDP] ${device.alias} (${device.ip}, model: ${device.deviceModel})');
+      LocalSendUyava.onDiscoveryDevice(device: device, transport: 'udp', sourceRef: Uyava.caller());
     }
     return state;
   }
@@ -176,6 +179,7 @@ class StartLegacyScan extends AsyncReduxAction<NearbyDevicesService, NearbyDevic
 
     await for (final device in stream) {
       notifier._discoveryLogger.addLog('[DISCOVER/TCP] ${device.alias} (${device.ip}, model: ${device.deviceModel})');
+      LocalSendUyava.onDiscoveryDevice(device: device, transport: 'tcp', sourceRef: Uyava.caller());
       await dispatchAsync(RegisterDeviceAction(device));
     }
 
@@ -210,6 +214,7 @@ class StartFavoriteScan extends AsyncReduxAction<NearbyDevicesService, NearbyDev
 
     await for (final device in stream) {
       notifier._discoveryLogger.addLog('[DISCOVER/TCP] ${device.alias} (${device.ip}, model: ${device.deviceModel})');
+      LocalSendUyava.onDiscoveryDevice(device: device, transport: 'favorite', sourceRef: Uyava.caller());
       await dispatchAsync(RegisterDeviceAction(device));
     }
 

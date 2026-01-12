@@ -21,6 +21,7 @@ import 'package:localsend_app/util/native/open_folder.dart';
 import 'package:localsend_app/util/native/platform_check.dart';
 import 'package:localsend_app/util/native/taskbar_helper.dart';
 import 'package:localsend_app/util/ui/nav_bar_padding.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/widget/custom_basic_appbar.dart';
 import 'package:localsend_app/widget/custom_progress_bar.dart';
 import 'package:localsend_app/widget/dialogs/cancel_session_dialog.dart';
@@ -28,6 +29,7 @@ import 'package:localsend_app/widget/dialogs/error_dialog.dart';
 import 'package:localsend_app/widget/file_thumbnail.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
+import 'package:uyava/uyava.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
@@ -64,6 +66,11 @@ class _ProgressPageState extends State<ProgressPage> with Refena {
   @override
   void initState() {
     super.initState();
+
+    LocalSendUyava.activateUiNode(
+      nodeId: LocalSendUyava.uiProgressNodeId,
+      sourceRef: Uyava.caller(),
+    );
 
     // init
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -169,6 +176,10 @@ class _ProgressPageState extends State<ProgressPage> with Refena {
 
   @override
   void dispose() {
+    LocalSendUyava.deactivateUiNode(
+      nodeId: LocalSendUyava.uiProgressNodeId,
+      sourceRef: Uyava.caller(),
+    );
     super.dispose();
     _finishTimer?.cancel();
     _wakelockPlusTimer?.cancel();

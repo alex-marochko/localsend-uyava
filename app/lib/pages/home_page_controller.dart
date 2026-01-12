@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:localsend_app/pages/home_page.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:refena_flutter/refena_flutter.dart';
+import 'package:uyava/uyava.dart';
 
 class HomePageVm {
   final PageController controller;
@@ -36,11 +38,29 @@ class ChangeTabAction extends ReduxAction<HomePageController, HomePageVm> {
 
   @override
   HomePageVm reduce() {
+    final String fromNodeId = _nodeIdForTab(state.currentTab);
+    final String toNodeId = _nodeIdForTab(tab);
+    LocalSendUyava.onUiTabChanged(
+      fromNodeId: fromNodeId,
+      toNodeId: toNodeId,
+      sourceRef: Uyava.caller(),
+    );
     state.controller.jumpToPage(tab.index);
     return HomePageVm(
       controller: state.controller,
       currentTab: tab,
       changeTab: state.changeTab,
     );
+  }
+}
+
+String _nodeIdForTab(HomeTab tab) {
+  switch (tab) {
+    case HomeTab.receive:
+      return LocalSendUyava.uiReceiveNodeId;
+    case HomeTab.send:
+      return LocalSendUyava.uiSendNodeId;
+    case HomeTab.settings:
+      return LocalSendUyava.uiSettingsNodeId;
   }
 }
