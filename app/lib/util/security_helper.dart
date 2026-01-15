@@ -5,6 +5,8 @@ import 'package:basic_utils/basic_utils.dart';
 import 'package:common/model/stored_security_context.dart';
 import 'package:convert/convert.dart';
 import 'package:localsend_app/rust/api/crypto.dart' as rust;
+import 'package:localsend_app/uyava/localsend_uyava.dart';
+import 'package:uyava/uyava.dart';
 
 /// Generates a random [SecurityContextResult].
 StoredSecurityContext generateSecurityContext([AsymmetricKeyPair? keyPair]) {
@@ -68,5 +70,15 @@ Future<void> verifyCertificate({
   required String cert,
   required String publicKey,
 }) async {
-  await rust.verifyCert(cert: cert, publicKey: publicKey);
+  try {
+    await rust.verifyCert(cert: cert, publicKey: publicKey);
+    LocalSendUyava.onRustCryptoVerify(success: true, sourceRef: Uyava.caller());
+  } catch (error) {
+    LocalSendUyava.onRustCryptoVerify(
+      success: false,
+      error: error.toString(),
+      sourceRef: Uyava.caller(),
+    );
+    rethrow;
+  }
 }

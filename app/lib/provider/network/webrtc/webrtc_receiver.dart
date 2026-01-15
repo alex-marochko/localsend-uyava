@@ -12,8 +12,10 @@ import 'package:localsend_app/pages/receive_page.dart';
 import 'package:localsend_app/provider/network/webrtc/signaling_provider.dart';
 import 'package:localsend_app/rust/api/model.dart';
 import 'package:localsend_app/rust/api/webrtc.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
+import 'package:uyava/uyava.dart';
 
 part 'webrtc_receiver.mapper.dart';
 
@@ -78,6 +80,10 @@ class AcceptOfferAction extends AsyncReduxAction<WebRTCReceiveService, WebRTCRec
       stunServers: notifier._stunServers,
       offer: state.offer,
       privateKey: notifier._key.privateKey,
+    );
+    LocalSendUyava.onRustWebrtcOfferAccepted(
+      sessionId: state.offer.sessionId,
+      sourceRef: Uyava.caller(),
     );
 
     controller.listenStatus().listen((status) {

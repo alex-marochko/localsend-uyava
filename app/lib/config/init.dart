@@ -53,6 +53,7 @@ import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:rhttp/rhttp.dart';
 import 'package:share_handler/share_handler.dart';
+import 'package:uyava/uyava.dart';
 import 'package:window_manager/window_manager.dart';
 
 final _logger = Logger('Init');
@@ -67,12 +68,19 @@ Future<RefenaContainer> preInit(List<String> args) async {
   await LocalSendUyava.initialize(args: args);
 
   await RustLib.init();
+  LocalSendUyava.onRustBridgeReady(sourceRef: Uyava.caller());
 
   if (kDebugMode) {
     try {
       await rust_logging.enableDebugLogging();
+      LocalSendUyava.onRustLoggingEnabled(success: true, sourceRef: Uyava.caller());
     } catch (e) {
       _logger.warning('Enabling debug logging failed', e);
+      LocalSendUyava.onRustLoggingEnabled(
+        success: false,
+        error: e.toString(),
+        sourceRef: Uyava.caller(),
+      );
     }
   }
 

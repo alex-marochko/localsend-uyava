@@ -14,9 +14,16 @@ class LocalSendUyava {
 
   static bool _initialized = false;
   static bool _errorBridgeInstalled = false;
+  static final Map<String, Map<String, FileDto>> _activeSendFiles = <String, Map<String, FileDto>>{};
+  static final Map<String, Map<String, FileDto>> _activeReceiveFiles = <String, Map<String, FileDto>>{};
 
   static const String rootNodeId = 'localsend.app';
   static const String errorsNodeId = 'localsend.errors';
+  static const String nativeGroupNodeId = 'localsend.native';
+  static const String rustBridgeNodeId = 'localsend.native.rust_bridge';
+  static const String rustWebrtcNodeId = 'localsend.native.rust_webrtc';
+  static const String rustCryptoNodeId = 'localsend.native.rust_crypto';
+  static const String rustLoggingNodeId = 'localsend.native.rust_logging';
   static const String uiGroupNodeId = 'localsend.ui';
   static const String uiHomeNodeId = 'localsend.ui.home';
   static const String uiSendNodeId = 'localsend.ui.send';
@@ -26,6 +33,7 @@ class LocalSendUyava {
 
   static const String networkGroupNodeId = 'localsend.network';
   static const String discoveryNodeId = 'localsend.network.discovery';
+  static const String securityNodeId = 'localsend.network.security';
   static const String httpClientNodeId = 'localsend.network.http_client';
   static const String httpServerNodeId = 'localsend.network.http_server';
   static const String signalingNodeId = 'localsend.network.signaling';
@@ -45,6 +53,11 @@ class LocalSendUyava {
   static const String edgeUiToSendId = 'edge.ui.send';
   static const String edgeUiToReceiveId = 'edge.ui.receive';
   static const String edgeDiscoveryToHttpId = 'edge.discovery.http';
+  static const String edgeSecurityToRustCryptoId = 'edge.security.rust_crypto';
+  static const String edgeSignalingToRustWebrtcId = 'edge.signaling.rust_webrtc';
+  static const String edgeRustBridgeToWebrtcId = 'edge.rust_bridge.webrtc';
+  static const String edgeRustBridgeToCryptoId = 'edge.rust_bridge.crypto';
+  static const String edgeRustBridgeToLoggingId = 'edge.rust_bridge.logging';
   static const String edgeSendToHttpId = 'edge.send.http';
   static const String edgeReceiveToHttpId = 'edge.receive.http';
   static const String edgeReceiveToStorageId = 'edge.receive.storage';
@@ -56,6 +69,10 @@ class LocalSendUyava {
   static const String tagUi = 'ui';
   static const String tagNetwork = 'network';
   static const String tagDiscovery = 'discovery';
+  static const String tagNative = 'native';
+  static const String tagRust = 'rust';
+  static const String tagSecurity = 'security';
+  static const String tagWebrtc = 'webrtc';
   static const String tagTransfer = 'transfer';
   static const String tagSend = 'send';
   static const String tagReceive = 'receive';
@@ -68,11 +85,13 @@ class LocalSendUyava {
 
   static const String sendChainId = 'localsend.send_flow';
   static const String receiveChainId = 'localsend.receive_flow';
+  static const String sendFileChainId = 'localsend.send_file_flow';
+  static const String receiveFileChainId = 'localsend.receive_file_flow';
 
-  static const String metricFileSizeBytes = 'localsend.transfer.file_size_bytes';
+  static const String metricFileSizeMb = 'localsend.transfer.file_size_mb';
   static const String metricFileDurationMs = 'localsend.transfer.file_duration_ms';
   static const String metricSessionDurationMs = 'localsend.transfer.session_duration_ms';
-  static const String metricThroughputKbps = 'localsend.transfer.throughput_kbps';
+  static const String metricThroughputMbPerSec = 'localsend.transfer.throughput_mb_s';
   static const String metricFilesCount = 'localsend.transfer.files_count';
 
   static final List<_NodeSpec> _nodeSpecs = <_NodeSpec>[
@@ -91,6 +110,50 @@ class LocalSendUyava {
       tags: <String>[tagDiagnostics, tagError],
       sourceRef: 'package:localsend_app/config/init.dart:1:1',
       standardType: UyavaStandardType.event,
+    ),
+    _NodeSpec(
+      id: nativeGroupNodeId,
+      label: 'Native Core',
+      parentId: rootNodeId,
+      tags: <String>[tagNative],
+      sourceRef: 'package:localsend_app/rust/frb_generated.dart:1:1',
+      standardType: UyavaStandardType.group,
+    ),
+    _NodeSpec(
+      id: rustBridgeNodeId,
+      label: 'Rust Bridge',
+      description: 'Flutter Rust Bridge bindings',
+      parentId: nativeGroupNodeId,
+      tags: <String>[tagNative, tagRust],
+      sourceRef: 'package:localsend_app/rust/frb_generated.dart:1:1',
+      standardType: UyavaStandardType.api,
+    ),
+    _NodeSpec(
+      id: rustWebrtcNodeId,
+      label: 'Rust WebRTC',
+      description: 'WebRTC engine and signaling core',
+      parentId: nativeGroupNodeId,
+      tags: <String>[tagNative, tagRust, tagWebrtc],
+      sourceRef: 'package:localsend_app/rust/api/webrtc.dart:1:1',
+      standardType: UyavaStandardType.service,
+    ),
+    _NodeSpec(
+      id: rustCryptoNodeId,
+      label: 'Rust Crypto',
+      description: 'Certificate verification',
+      parentId: nativeGroupNodeId,
+      tags: <String>[tagNative, tagRust, tagSecurity],
+      sourceRef: 'package:localsend_app/rust/api/crypto.dart:1:1',
+      standardType: UyavaStandardType.service,
+    ),
+    _NodeSpec(
+      id: rustLoggingNodeId,
+      label: 'Rust Logging',
+      description: 'Native logging hooks',
+      parentId: nativeGroupNodeId,
+      tags: <String>[tagNative, tagRust],
+      sourceRef: 'package:localsend_app/rust/api/logging.dart:1:1',
+      standardType: UyavaStandardType.service,
     ),
     _NodeSpec(
       id: uiGroupNodeId,
@@ -159,6 +222,15 @@ class LocalSendUyava {
       parentId: networkGroupNodeId,
       tags: <String>[tagNetwork, tagDiscovery],
       sourceRef: 'package:localsend_app/provider/network/nearby_devices_provider.dart:1:1',
+      standardType: UyavaStandardType.service,
+    ),
+    _NodeSpec(
+      id: securityNodeId,
+      label: 'Security',
+      description: 'Trust and certificate checks',
+      parentId: networkGroupNodeId,
+      tags: <String>[tagNetwork, tagSecurity],
+      sourceRef: 'package:localsend_app/util/security_helper.dart:1:1',
       standardType: UyavaStandardType.service,
     ),
     _NodeSpec(
@@ -448,6 +520,7 @@ class LocalSendUyava {
     required int isolateIndex,
     String? sourceRef,
   }) {
+    _trackFile(_activeSendFiles, sessionId, file);
     Uyava.emitNodeEvent(
       nodeId: sendSessionNodeId,
       message: 'Sending ${file.fileName}',
@@ -457,7 +530,7 @@ class LocalSendUyava {
         'fileId': file.id,
         'fileSize': file.size,
         'isolateIndex': isolateIndex,
-        'metric': _metric(metricFileSizeBytes, file.size),
+        'metric': _metric(metricFileSizeMb, _bytesToMb(file.size)),
       },
       sourceRef: sourceRef,
     );
@@ -465,6 +538,22 @@ class LocalSendUyava {
       edge: edgeSendToHttpId,
       message: 'Upload ${file.fileName}',
       severity: UyavaSeverity.info,
+      sourceRef: sourceRef,
+    );
+    _emitChainStep(
+      nodeId: httpClientNodeId,
+      chainId: sendFileChainId,
+      stepId: 'file_upload_start',
+      attempt: file.id,
+      edgeId: edgeSendToHttpId,
+      message: 'Uploading ${file.fileName}',
+      tags: <String>[tagSend, tagFile, tagNetwork],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+        'fileId': file.id,
+        'fileName': file.fileName,
+        'fileSize': file.size,
+      },
       sourceRef: sourceRef,
     );
   }
@@ -495,7 +584,7 @@ class LocalSendUyava {
       sourceRef: sourceRef,
     );
     if (durationMs != null && durationMs > 0) {
-      final double throughput = (file.size / 1024) / (durationMs / 1000);
+      final double throughput = _bytesToMb(file.size) / (durationMs / 1000);
       Uyava.emitNodeEvent(
         nodeId: sendSessionNodeId,
         message: 'Upload throughput sample',
@@ -503,11 +592,30 @@ class LocalSendUyava {
         payload: <String, dynamic>{
           'sessionId': sessionId,
           'fileId': file.id,
-          'metric': _metric(metricThroughputKbps, throughput),
+          'metric': _metric(metricThroughputMbPerSec, throughput),
         },
         sourceRef: sourceRef,
       );
     }
+    _emitChainStep(
+      nodeId: historyNodeId,
+      chainId: sendFileChainId,
+      stepId: 'file_upload_complete',
+      attempt: file.id,
+      edgeId: edgeSendToHistoryId,
+      message: success ? 'Recorded ${file.fileName}' : 'Upload failed for ${file.fileName}',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      status: success ? null : 'failed',
+      tags: <String>[tagSend, tagFile],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+        'fileId': file.id,
+        'fileName': file.fileName,
+        if (errorMessage != null) 'error': errorMessage,
+      },
+      sourceRef: sourceRef,
+    );
+    _untrackFile(_activeSendFiles, sessionId, file.id);
   }
 
   static void onSendSessionFinished({
@@ -524,6 +632,7 @@ class LocalSendUyava {
       edgeId: edgeSendToHistoryId,
       message: success ? 'Send session finished' : 'Send session failed',
       severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      status: success ? null : 'failed',
       tags: <String>[tagSend, tagSession],
       payload: <String, dynamic>{
         'sessionId': sessionId,
@@ -532,6 +641,21 @@ class LocalSendUyava {
       },
       sourceRef: sourceRef,
     );
+    if (!success) {
+      _failPendingFiles(
+        fileMap: _activeSendFiles,
+        sessionId: sessionId,
+        chainId: sendFileChainId,
+        stepId: 'file_upload_complete',
+        nodeId: historyNodeId,
+        edgeId: edgeSendToHistoryId,
+        tags: const <String>[tagSend, tagFile],
+        reason: 'session_failed',
+        sourceRef: sourceRef,
+      );
+    } else {
+      _activeSendFiles.remove(sessionId);
+    }
     Uyava.updateNodeLifecycle(
       nodeId: sendSessionNodeId,
       state: UyavaLifecycleState.disposed,
@@ -543,15 +667,42 @@ class LocalSendUyava {
     required String reason,
     String? sourceRef,
   }) {
-    Uyava.emitNodeEvent(
+    _emitChainStep(
       nodeId: sendSessionNodeId,
+      chainId: sendChainId,
+      stepId: 'transfer_complete',
+      attempt: sessionId,
+      edgeId: edgeSendToHistoryId,
       message: 'Send session canceled',
-      severity: UyavaSeverity.warn,
+      severity: UyavaSeverity.error,
+      status: 'failed',
       tags: const <String>[tagSend, tagSession],
       payload: <String, dynamic>{
         'sessionId': sessionId,
         'reason': reason,
       },
+      sourceRef: sourceRef,
+    );
+    Uyava.emitNodeEvent(
+      nodeId: sendSessionNodeId,
+      message: 'Send session canceled',
+      severity: UyavaSeverity.error,
+      tags: const <String>[tagSend, tagSession],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+        'reason': reason,
+      },
+      sourceRef: sourceRef,
+    );
+    _failPendingFiles(
+      fileMap: _activeSendFiles,
+      sessionId: sessionId,
+      chainId: sendFileChainId,
+      stepId: 'file_upload_complete',
+      nodeId: historyNodeId,
+      edgeId: edgeSendToHistoryId,
+      tags: const <String>[tagSend, tagFile],
+      reason: reason,
       sourceRef: sourceRef,
     );
     Uyava.updateNodeLifecycle(
@@ -662,6 +813,7 @@ class LocalSendUyava {
     required FileDto file,
     String? sourceRef,
   }) {
+    _trackFile(_activeReceiveFiles, sessionId, file);
     Uyava.emitNodeEvent(
       nodeId: receiveSessionNodeId,
       message: 'Receiving ${file.fileName}',
@@ -670,7 +822,23 @@ class LocalSendUyava {
         'sessionId': sessionId,
         'fileId': file.id,
         'fileSize': file.size,
-        'metric': _metric(metricFileSizeBytes, file.size),
+        'metric': _metric(metricFileSizeMb, _bytesToMb(file.size)),
+      },
+      sourceRef: sourceRef,
+    );
+    _emitChainStep(
+      nodeId: httpServerNodeId,
+      chainId: receiveFileChainId,
+      stepId: 'file_download_start',
+      attempt: file.id,
+      edgeId: edgeReceiveToHttpId,
+      message: 'Receiving ${file.fileName}',
+      tags: <String>[tagReceive, tagFile, tagNetwork],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+        'fileId': file.id,
+        'fileName': file.fileName,
+        'fileSize': file.size,
       },
       sourceRef: sourceRef,
     );
@@ -704,7 +872,7 @@ class LocalSendUyava {
       sourceRef: sourceRef,
     );
     if (durationMs != null && durationMs > 0) {
-      final double throughput = (file.size / 1024) / (durationMs / 1000);
+      final double throughput = _bytesToMb(file.size) / (durationMs / 1000);
       Uyava.emitNodeEvent(
         nodeId: receiveSessionNodeId,
         message: 'Receive throughput sample',
@@ -712,11 +880,31 @@ class LocalSendUyava {
         payload: <String, dynamic>{
           'sessionId': sessionId,
           'fileId': file.id,
-          'metric': _metric(metricThroughputKbps, throughput),
+          'metric': _metric(metricThroughputMbPerSec, throughput),
         },
         sourceRef: sourceRef,
       );
     }
+    _emitChainStep(
+      nodeId: fileSaverNodeId,
+      chainId: receiveFileChainId,
+      stepId: 'file_saved',
+      attempt: file.id,
+      edgeId: edgeReceiveToStorageId,
+      message: success ? 'Saved ${file.fileName}' : 'Failed to save ${file.fileName}',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      status: success ? null : 'failed',
+      tags: <String>[tagReceive, tagFile, tagStorage],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+        'fileId': file.id,
+        'fileName': file.fileName,
+        if (filePath != null) 'path': filePath,
+        if (errorMessage != null) 'error': errorMessage,
+      },
+      sourceRef: sourceRef,
+    );
+    _untrackFile(_activeReceiveFiles, sessionId, file.id);
   }
 
   static void onReceiveSessionFinished({
@@ -733,6 +921,7 @@ class LocalSendUyava {
       edgeId: edgeReceiveToHistoryId,
       message: success ? 'Receive session finished' : 'Receive session failed',
       severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      status: success ? null : 'failed',
       tags: <String>[tagReceive, tagSession],
       payload: <String, dynamic>{
         'sessionId': sessionId,
@@ -741,6 +930,21 @@ class LocalSendUyava {
       },
       sourceRef: sourceRef,
     );
+    if (!success) {
+      _failPendingFiles(
+        fileMap: _activeReceiveFiles,
+        sessionId: sessionId,
+        chainId: receiveFileChainId,
+        stepId: 'file_saved',
+        nodeId: fileSaverNodeId,
+        edgeId: edgeReceiveToStorageId,
+        tags: const <String>[tagReceive, tagFile, tagStorage],
+        reason: 'session_failed',
+        sourceRef: sourceRef,
+      );
+    } else {
+      _activeReceiveFiles.remove(sessionId);
+    }
     Uyava.updateNodeLifecycle(
       nodeId: receiveSessionNodeId,
       state: UyavaLifecycleState.disposed,
@@ -752,15 +956,42 @@ class LocalSendUyava {
     required String reason,
     String? sourceRef,
   }) {
-    Uyava.emitNodeEvent(
+    _emitChainStep(
       nodeId: receiveSessionNodeId,
+      chainId: receiveChainId,
+      stepId: 'transfer_complete',
+      attempt: sessionId,
+      edgeId: edgeReceiveToHistoryId,
       message: 'Receive session canceled',
-      severity: UyavaSeverity.warn,
+      severity: UyavaSeverity.error,
+      status: 'failed',
       tags: const <String>[tagReceive, tagSession],
       payload: <String, dynamic>{
         'sessionId': sessionId,
         'reason': reason,
       },
+      sourceRef: sourceRef,
+    );
+    Uyava.emitNodeEvent(
+      nodeId: receiveSessionNodeId,
+      message: 'Receive session canceled',
+      severity: UyavaSeverity.error,
+      tags: const <String>[tagReceive, tagSession],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+        'reason': reason,
+      },
+      sourceRef: sourceRef,
+    );
+    _failPendingFiles(
+      fileMap: _activeReceiveFiles,
+      sessionId: sessionId,
+      chainId: receiveFileChainId,
+      stepId: 'file_saved',
+      nodeId: fileSaverNodeId,
+      edgeId: edgeReceiveToStorageId,
+      tags: const <String>[tagReceive, tagFile, tagStorage],
+      reason: reason,
       sourceRef: sourceRef,
     );
     Uyava.updateNodeLifecycle(
@@ -803,6 +1034,36 @@ class LocalSendUyava {
         from: discoveryNodeId,
         to: httpClientNodeId,
         label: 'discover via HTTP',
+      ),
+      UyavaEdge(
+        id: edgeSecurityToRustCryptoId,
+        from: securityNodeId,
+        to: rustCryptoNodeId,
+        label: 'verify cert',
+      ),
+      UyavaEdge(
+        id: edgeSignalingToRustWebrtcId,
+        from: signalingNodeId,
+        to: rustWebrtcNodeId,
+        label: 'RTC signaling',
+      ),
+      UyavaEdge(
+        id: edgeRustBridgeToWebrtcId,
+        from: rustBridgeNodeId,
+        to: rustWebrtcNodeId,
+        label: 'FRB call',
+      ),
+      UyavaEdge(
+        id: edgeRustBridgeToCryptoId,
+        from: rustBridgeNodeId,
+        to: rustCryptoNodeId,
+        label: 'FRB call',
+      ),
+      UyavaEdge(
+        id: edgeRustBridgeToLoggingId,
+        from: rustBridgeNodeId,
+        to: rustLoggingNodeId,
+        label: 'FRB call',
       ),
       UyavaEdge(
         id: edgeSendManagerToSessionId,
@@ -855,9 +1116,9 @@ class LocalSendUyava {
 
   static void _defineMetrics() {
     Uyava.defineMetric(
-      id: metricFileSizeBytes,
-      label: 'Transfer size (bytes)',
-      unit: 'bytes',
+      id: metricFileSizeMb,
+      label: 'Transfer size (MB)',
+      unit: 'MB',
       tags: const <String>[tagTransfer, tagFile, tagMetrics],
       aggregators: const <UyavaMetricAggregator>[
         UyavaMetricAggregator.last,
@@ -888,9 +1149,9 @@ class LocalSendUyava {
       ],
     );
     Uyava.defineMetric(
-      id: metricThroughputKbps,
-      label: 'Throughput (kB/s)',
-      unit: 'kB/s',
+      id: metricThroughputMbPerSec,
+      label: 'Throughput (MB/s)',
+      unit: 'MB/s',
       tags: const <String>[tagTransfer, tagMetrics],
       aggregators: const <UyavaMetricAggregator>[
         UyavaMetricAggregator.last,
@@ -930,6 +1191,26 @@ class LocalSendUyava {
         UyavaEventChainStep(stepId: 'transfer_complete', nodeId: receiveSessionNodeId, edgeId: edgeReceiveToHistoryId),
       ],
     );
+    Uyava.defineEventChain(
+      id: sendFileChainId,
+      tag: 'chain:send-file',
+      label: 'Send File Flow',
+      description: 'Upload and record a single file',
+      steps: const <UyavaEventChainStep>[
+        UyavaEventChainStep(stepId: 'file_upload_start', nodeId: httpClientNodeId, edgeId: edgeSendToHttpId),
+        UyavaEventChainStep(stepId: 'file_upload_complete', nodeId: historyNodeId, edgeId: edgeSendToHistoryId),
+      ],
+    );
+    Uyava.defineEventChain(
+      id: receiveFileChainId,
+      tag: 'chain:receive-file',
+      label: 'Receive File Flow',
+      description: 'Download and store a single file',
+      steps: const <UyavaEventChainStep>[
+        UyavaEventChainStep(stepId: 'file_download_start', nodeId: httpServerNodeId, edgeId: edgeReceiveToHttpId),
+        UyavaEventChainStep(stepId: 'file_saved', nodeId: fileSaverNodeId, edgeId: edgeReceiveToStorageId),
+      ],
+    );
   }
 
   static void _installErrorBridge() {
@@ -955,6 +1236,138 @@ class LocalSendUyava {
       _emitPlatformError(error, stack);
       return handled;
     };
+  }
+
+  static void onRustBridgeReady({String? sourceRef}) {
+    Uyava.emitNodeEvent(
+      nodeId: rustBridgeNodeId,
+      message: 'Rust bridge ready',
+      tags: const <String>[tagNative, tagRust],
+      sourceRef: sourceRef,
+    );
+  }
+
+  static void onRustLoggingEnabled({
+    required bool success,
+    String? sourceRef,
+    String? error,
+  }) {
+    Uyava.emitNodeEvent(
+      nodeId: rustLoggingNodeId,
+      message: success ? 'Rust logging enabled' : 'Rust logging failed',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      tags: const <String>[tagNative, tagRust],
+      payload: <String, dynamic>{
+        'success': success,
+        if (error != null) 'error': error,
+      },
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeRustBridgeToLoggingId,
+      message: success ? 'Enable logging' : 'Enable logging failed',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      sourceRef: sourceRef,
+    );
+  }
+
+  static void onRustCryptoVerify({
+    required bool success,
+    String? sourceRef,
+    String? error,
+  }) {
+    Uyava.emitNodeEvent(
+      nodeId: securityNodeId,
+      message: success ? 'Certificate verified' : 'Certificate verification failed',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      tags: const <String>[tagSecurity],
+      payload: <String, dynamic>{
+        'success': success,
+        if (error != null) 'error': error,
+      },
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeSecurityToRustCryptoId,
+      message: 'Verify certificate',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeRustBridgeToCryptoId,
+      message: 'FRB crypto call',
+      severity: success ? UyavaSeverity.info : UyavaSeverity.error,
+      sourceRef: sourceRef,
+    );
+  }
+
+  static void onRustCryptoKeyGenerated({String? sourceRef}) {
+    Uyava.emitNodeEvent(
+      nodeId: rustCryptoNodeId,
+      message: 'Key pair generated',
+      tags: const <String>[tagNative, tagRust, tagSecurity],
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeRustBridgeToCryptoId,
+      message: 'FRB crypto call',
+      severity: UyavaSeverity.info,
+      sourceRef: sourceRef,
+    );
+  }
+
+  static void onRustWebrtcConnect({
+    required String signalingServer,
+    String? sourceRef,
+  }) {
+    Uyava.emitNodeEvent(
+      nodeId: signalingNodeId,
+      message: 'Connect WebRTC signaling',
+      tags: const <String>[tagNetwork, tagWebrtc],
+      payload: <String, dynamic>{
+        'server': signalingServer,
+      },
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeSignalingToRustWebrtcId,
+      message: 'Connect signaling',
+      severity: UyavaSeverity.info,
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeRustBridgeToWebrtcId,
+      message: 'FRB WebRTC call',
+      severity: UyavaSeverity.info,
+      sourceRef: sourceRef,
+    );
+  }
+
+  static void onRustWebrtcOfferAccepted({
+    required String sessionId,
+    String? sourceRef,
+  }) {
+    Uyava.emitNodeEvent(
+      nodeId: rustWebrtcNodeId,
+      message: 'WebRTC offer accepted',
+      tags: const <String>[tagNative, tagRust, tagWebrtc],
+      payload: <String, dynamic>{
+        'sessionId': sessionId,
+      },
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeSignalingToRustWebrtcId,
+      message: 'Accept offer',
+      severity: UyavaSeverity.info,
+      sourceRef: sourceRef,
+    );
+    Uyava.emitEdgeEvent(
+      edge: edgeRustBridgeToWebrtcId,
+      message: 'FRB WebRTC call',
+      severity: UyavaSeverity.info,
+      sourceRef: sourceRef,
+    );
   }
 
   static void _emitFlutterError(FlutterErrorDetails details) {
@@ -1004,9 +1417,15 @@ class LocalSendUyava {
   static const List<String> _alwaysOnNodeIds = <String>[
         rootNodeId,
         errorsNodeId,
+        nativeGroupNodeId,
+        rustBridgeNodeId,
+        rustWebrtcNodeId,
+        rustCryptoNodeId,
+        rustLoggingNodeId,
         uiGroupNodeId,
         networkGroupNodeId,
         discoveryNodeId,
+        securityNodeId,
         httpClientNodeId,
         httpServerNodeId,
         signalingNodeId,
@@ -1039,6 +1458,69 @@ class LocalSendUyava {
     };
   }
 
+  static double _bytesToMb(int bytes) => bytes / (1024 * 1024);
+
+  static void _trackFile(
+    Map<String, Map<String, FileDto>> fileMap,
+    String sessionId,
+    FileDto file,
+  ) {
+    final Map<String, FileDto> files = fileMap.putIfAbsent(sessionId, () => <String, FileDto>{});
+    files[file.id] = file;
+  }
+
+  static void _untrackFile(
+    Map<String, Map<String, FileDto>> fileMap,
+    String sessionId,
+    String fileId,
+  ) {
+    final Map<String, FileDto>? files = fileMap[sessionId];
+    if (files == null) {
+      return;
+    }
+    files.remove(fileId);
+    if (files.isEmpty) {
+      fileMap.remove(sessionId);
+    }
+  }
+
+  static void _failPendingFiles({
+    required Map<String, Map<String, FileDto>> fileMap,
+    required String sessionId,
+    required String chainId,
+    required String stepId,
+    required String nodeId,
+    required String edgeId,
+    required List<String> tags,
+    required String reason,
+    String? sourceRef,
+  }) {
+    final Map<String, FileDto>? files = fileMap.remove(sessionId);
+    if (files == null || files.isEmpty) {
+      return;
+    }
+    for (final FileDto file in files.values) {
+      _emitChainStep(
+        nodeId: nodeId,
+        chainId: chainId,
+        stepId: stepId,
+        attempt: file.id,
+        edgeId: edgeId,
+        message: 'Canceled ${file.fileName}',
+        severity: UyavaSeverity.error,
+        status: 'failed',
+        tags: tags,
+        payload: <String, dynamic>{
+          'sessionId': sessionId,
+          'fileId': file.id,
+          'fileName': file.fileName,
+          'reason': reason,
+        },
+        sourceRef: sourceRef,
+      );
+    }
+  }
+
   static void _emitChainStep({
     required String nodeId,
     required String chainId,
@@ -1046,6 +1528,7 @@ class LocalSendUyava {
     required String attempt,
     required String message,
     String? edgeId,
+    String? status,
     UyavaSeverity? severity,
     List<String>? tags,
     Map<String, dynamic>? payload,
@@ -1061,8 +1544,10 @@ class LocalSendUyava {
           'id': chainId,
           'step': stepId,
           'attempt': attempt,
+          if (status != null) 'status': status,
         },
         if (edgeId != null) 'edgeId': edgeId,
+        if (status != null) 'status': status,
         if (payload != null) ...payload,
       },
       sourceRef: sourceRef,

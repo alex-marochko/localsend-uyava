@@ -13,7 +13,9 @@ import 'package:localsend_app/provider/settings_provider.dart';
 import 'package:localsend_app/rust/api/crypto.dart' as crypto;
 import 'package:localsend_app/rust/api/model.dart' as rust;
 import 'package:localsend_app/rust/api/webrtc.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:refena_flutter/refena_flutter.dart';
+import 'package:uyava/uyava.dart';
 
 part 'signaling_provider.mapper.dart';
 
@@ -78,6 +80,7 @@ class _SetupSignalingConnection extends AsyncGlobalAction {
 
     // TODO: Use persistent key
     final key = await crypto.generateKeyPair();
+    LocalSendUyava.onRustCryptoKeyGenerated(sourceRef: Uyava.caller());
     print('private key: ${key.privateKey}');
 
     LsSignalingConnection? connection;
@@ -92,6 +95,10 @@ class _SetupSignalingConnection extends AsyncGlobalAction {
       privateKey: key.privateKey,
       onConnection: (c) {
         connection = c;
+        LocalSendUyava.onRustWebrtcConnect(
+          signalingServer: signalingServer,
+          sourceRef: Uyava.caller(),
+        );
 
         ref
             .redux(signalingProvider)
