@@ -1846,17 +1846,19 @@ packages:
   uyava:
     dependency: "direct main"
     description:
-      path: "../../private/packages/uyava"
-      relative: true
-    source: path
-    version: "0.2.0"
+      name: uyava
+      sha256: "2e60e4bdba93402cd868d0c865c54187751b218cf2d7858687826407772a03db"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1-beta.2"
   uyava_protocol:
     dependency: transitive
     description:
-      path: "../../private/packages/uyava_protocol"
-      relative: true
-    source: path
-    version: "0.2.0"
+      name: uyava_protocol
+      sha256: "5e185e6233d818374b1ddb3fbd34255076cccaf8d18c443cab944ab7bdbeab94"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1-beta.1"
   vector_graphics_codec:
     dependency: transitive
     description:
