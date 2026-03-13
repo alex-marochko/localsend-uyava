@@ -1,6 +1,6 @@
 # LocalSend Uyava Fork
 
-This repository is a fork of [localsend/localsend](https://github.com/localsend/localsend) focused on integrating [Uyava](https://uyava.io/docs/) into LocalSend as:
+This repository is a fork of [localsend/localsend](https://github.com/localsend/localsend) focused on integrating [Uyava](https://uyava.io/) into LocalSend as:
 
 - an architecture graph,
 - a runtime debugging surface,
@@ -15,7 +15,7 @@ This fork is meant for architecture exploration and instrumentation work. If you
 
 To inspect the Uyava graph while LocalSend is running, open the `Uyava` tab in DevTools.
 
-If you prefer a standalone viewer, or you want to use recording and replay features for debugging sessions, you can also connect through the Uyava desktop app available from [uyava.io](https://uyava.io/docs/).
+If you prefer a standalone viewer, or you want to use recording and replay features for debugging sessions, you can also connect through the Uyava desktop app available from [uyava.io](https://uyava.io/).
 
 ## Fork Status
 
