@@ -18,11 +18,13 @@ import 'package:localsend_app/util/ip_helper.dart';
 import 'package:localsend_app/util/native/platform_check.dart';
 import 'package:localsend_app/util/native/taskbar_helper.dart';
 import 'package:localsend_app/util/ui/snackbar.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/widget/device_bage.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uyava/uyava.dart';
 
 class ReceivePageVm {
   final SessionStatus? status;
@@ -60,6 +62,26 @@ class ReceivePage extends StatefulWidget {
 
 class _ReceivePageState extends State<ReceivePage> with Refena {
   bool _showFullIp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    LocalSendUyava.activateUiNode(
+      nodeId: LocalSendUyava.uiReceivePageNodeId,
+      sourceRef: Uyava.caller(),
+      message: 'Receive page shown',
+    );
+  }
+
+  @override
+  void dispose() {
+    LocalSendUyava.deactivateUiNode(
+      nodeId: LocalSendUyava.uiReceivePageNodeId,
+      sourceRef: Uyava.caller(),
+      message: 'Receive page hidden',
+    );
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

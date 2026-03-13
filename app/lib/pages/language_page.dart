@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:localsend_app/gen/strings.g.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
+import 'package:localsend_app/uyava/uyava_page_lifecycle.dart';
 import 'package:localsend_app/widget/custom_basic_appbar.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:refena_flutter/refena_flutter.dart';
@@ -27,38 +29,41 @@ class _LanguagePageState extends State<LanguagePage> {
   Widget build(BuildContext context) {
     final t = Translations.of(context);
     final activeLocale = context.ref.watch(settingsProvider.select((s) => s.locale));
-    return Scaffold(
-      appBar: basicLocalSendAppbar(t.sendTab.selection.title),
-      body: ResponsiveListView(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-        children: [
-          ...[
-            null,
-            ...AppLocale.values,
-          ].map((locale) {
-            return ListTile(
-              onTap: () async {
-                await context.ref.notifier(settingsProvider).setLocale(locale);
-                if (locale == null) {
-                  await LocaleSettings.useDeviceLocale();
-                } else {
-                  await LocaleSettings.setLocale(locale);
-                }
-              },
-              title: Row(
-                children: [
-                  Flexible(
-                    child: Text(locale?.humanName ?? t.settingsTab.general.languageOptions.system),
-                  ),
-                  if (locale == activeLocale) ...[
-                    const SizedBox(width: 10),
-                    const Icon(Icons.check_circle, color: Colors.green),
+    return UyavaPageLifecycle(
+      nodeId: LocalSendUyava.uiLanguageNodeId,
+      child: Scaffold(
+        appBar: basicLocalSendAppbar(t.sendTab.selection.title),
+        body: ResponsiveListView(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+          children: [
+            ...[
+              null,
+              ...AppLocale.values,
+            ].map((locale) {
+              return ListTile(
+                onTap: () async {
+                  await context.ref.notifier(settingsProvider).setLocale(locale);
+                  if (locale == null) {
+                    await LocaleSettings.useDeviceLocale();
+                  } else {
+                    await LocaleSettings.setLocale(locale);
+                  }
+                },
+                title: Row(
+                  children: [
+                    Flexible(
+                      child: Text(locale?.humanName ?? t.settingsTab.general.languageOptions.system),
+                    ),
+                    if (locale == activeLocale) ...[
+                      const SizedBox(width: 10),
+                      const Icon(Icons.check_circle, color: Colors.green),
+                    ],
                   ],
-                ],
-              ),
-            );
-          }),
-        ],
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import 'package:localsend_app/provider/network/server/server_provider.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
 import 'package:localsend_app/util/native/platform_check.dart';
 import 'package:localsend_app/util/ui/snackbar.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/widget/custom_basic_appbar.dart';
 import 'package:localsend_app/widget/dialogs/pin_dialog.dart';
 import 'package:localsend_app/widget/dialogs/qr_dialog.dart';
@@ -16,6 +17,7 @@ import 'package:localsend_app/widget/dialogs/zoom_dialog.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
+import 'package:uyava/uyava.dart';
 
 enum _ServerState { initializing, running, error, stopping }
 
@@ -36,6 +38,11 @@ class _WebSendPageState extends State<WebSendPage> with Refena {
   @override
   void initState() {
     super.initState();
+    LocalSendUyava.activateUiNode(
+      nodeId: LocalSendUyava.uiWebSendNodeId,
+      sourceRef: Uyava.caller(),
+      message: 'Web send page shown',
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _init(encrypted: false);
     });
@@ -79,6 +86,16 @@ class _WebSendPageState extends State<WebSendPage> with Refena {
   /// Web share uses unencrypted http, so we need to revert to the previous state.
   Future<void> _revertServerState() async {
     await ref.notifier(serverProvider).restartServerFromSettings();
+  }
+
+  @override
+  void dispose() {
+    LocalSendUyava.deactivateUiNode(
+      nodeId: LocalSendUyava.uiWebSendNodeId,
+      sourceRef: Uyava.caller(),
+      message: 'Web send page hidden',
+    );
+    super.dispose();
   }
 
   @override

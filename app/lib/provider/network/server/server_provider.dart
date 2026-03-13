@@ -13,8 +13,10 @@ import 'package:localsend_app/provider/security_provider.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
 import 'package:localsend_app/util/alias_generator.dart';
 import 'package:localsend_app/util/simple_server.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:logging/logging.dart';
 import 'package:refena_flutter/refena_flutter.dart';
+import 'package:uyava/uyava.dart';
 
 final _logger = Logger('Server');
 
@@ -154,13 +156,23 @@ class ServerService extends Notifier<ServerState?> {
     );
 
     state = newServerState;
+    LocalSendUyava.onServerStarted(
+      alias: alias,
+      port: port,
+      https: https,
+      sourceRef: Uyava.caller(),
+    );
     return newServerState;
   }
 
   Future<void> stopServer() async {
+    if (state == null) {
+      return;
+    }
     _logger.info('Stopping server...');
     await state?.httpServer.close();
     state = null;
+    LocalSendUyava.onServerStopped(sourceRef: Uyava.caller());
     _logger.info('Server stopped.');
   }
 

@@ -5,6 +5,8 @@ import 'package:localsend_app/pages/donation/donation_page_vm.dart';
 // [FOSS_REMOVE_START]
 import 'package:localsend_app/provider/purchase_provider.dart';
 // [FOSS_REMOVE_END]
+import 'package:localsend_app/uyava/localsend_uyava.dart';
+import 'package:localsend_app/uyava/uyava_page_lifecycle.dart';
 import 'package:localsend_app/widget/custom_basic_appbar.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:refena_flutter/refena_flutter.dart';
@@ -15,52 +17,55 @@ class DonationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ViewModelBuilder(
-      provider: (ref) => donationPageVmProvider,
-      // [FOSS_REMOVE_START]
-      init: (context) => context.redux(purchaseProvider).dispatchAsync(FetchPricesAndPurchasesAction()), // ignore: discarded_futures
-      // [FOSS_REMOVE_END]
-      builder: (context, vm) {
-        return Scaffold(
-          appBar: basicLocalSendAppbar(t.donationPage.title),
-          body: Stack(
-            children: [
-              ResponsiveListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  const SizedBox(height: 50),
-                  Center(
-                    child: Text(
-                      t.donationPage.info,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  if (vm.purchased.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: Center(
-                        child: Text(
-                          t.donationPage.thanks,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Theme.of(context).colorScheme.primary),
-                        ),
+    return UyavaPageLifecycle(
+      nodeId: LocalSendUyava.uiDonationNodeId,
+      child: ViewModelBuilder(
+        provider: (ref) => donationPageVmProvider,
+        // [FOSS_REMOVE_START]
+        init: (context) => context.redux(purchaseProvider).dispatchAsync(FetchPricesAndPurchasesAction()), // ignore: discarded_futures
+        // [FOSS_REMOVE_END]
+        builder: (context, vm) {
+          return Scaffold(
+            appBar: basicLocalSendAppbar(t.donationPage.title),
+            body: Stack(
+              children: [
+                ResponsiveListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    const SizedBox(height: 50),
+                    Center(
+                      child: Text(
+                        t.donationPage.info,
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  if (vm.platformSupportPayment) _StoreDonation(vm) else const _LinkDonation(),
-                ],
-              ),
-              if (vm.pending)
-                Container(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                    const SizedBox(height: 50),
+                    if (vm.purchased.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Center(
+                          child: Text(
+                            t.donationPage.thanks,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                          ),
+                        ),
+                      ),
+                    if (vm.platformSupportPayment) _StoreDonation(vm) else const _LinkDonation(),
+                  ],
                 ),
-            ],
-          ),
-        );
-      },
+                if (vm.pending)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -10,6 +10,7 @@ import 'package:localsend_app/provider/favorites_provider.dart';
 import 'package:localsend_app/provider/network/send_provider.dart';
 import 'package:localsend_app/util/favorites.dart';
 import 'package:localsend_app/util/native/taskbar_helper.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/widget/animations/initial_fade_transition.dart';
 import 'package:localsend_app/widget/animations/initial_slide_transition.dart';
 import 'package:localsend_app/widget/custom_basic_appbar.dart';
@@ -18,6 +19,7 @@ import 'package:localsend_app/widget/list_tile/device_list_tile.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
+import 'package:uyava/uyava.dart';
 
 class SendPage extends StatefulWidget {
   final bool showAppBar;
@@ -39,7 +41,22 @@ class _SendPageState extends State<SendPage> with Refena {
   Device? _targetDevice;
 
   @override
+  void initState() {
+    super.initState();
+    LocalSendUyava.activateUiNode(
+      nodeId: LocalSendUyava.uiSendPageNodeId,
+      sourceRef: Uyava.caller(),
+      message: 'Send page shown',
+    );
+  }
+
+  @override
   void dispose() {
+    LocalSendUyava.deactivateUiNode(
+      nodeId: LocalSendUyava.uiSendPageNodeId,
+      sourceRef: Uyava.caller(),
+      message: 'Send page hidden',
+    );
     super.dispose();
     unawaited(TaskbarHelper.clearProgressBar());
   }

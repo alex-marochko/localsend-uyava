@@ -7,6 +7,8 @@ import 'package:localsend_app/provider/settings_provider.dart';
 import 'package:localsend_app/util/native/cmd_helper.dart';
 import 'package:localsend_app/util/native/macos_channel.dart' as macos_channel;
 import 'package:localsend_app/util/native/platform_check.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
+import 'package:localsend_app/uyava/uyava_page_lifecycle.dart';
 import 'package:localsend_app/widget/custom_basic_appbar.dart';
 import 'package:localsend_app/widget/custom_icon_button.dart';
 import 'package:localsend_app/widget/dialogs/not_available_on_platform_dialog.dart';
@@ -19,48 +21,51 @@ class TroubleshootPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.ref.watch(settingsProvider);
-    return Scaffold(
-      appBar: basicLocalSendAppbar(t.troubleshootPage.title),
-      body: ResponsiveListView(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 30),
-        children: [
-          Text(t.troubleshootPage.subTitle, textAlign: TextAlign.center),
-          const SizedBox(height: 5),
-          _TroubleshootItem(
-            symptomText: t.troubleshootPage.firewall.symptom,
-            solutionText: t.troubleshootPage.firewall.solution(port: settings.port),
-            primaryButton: _FixButton(
-              label: t.troubleshootPage.fixButton,
-              onTapMap: {
-                TargetPlatform.windows: _CommandFixAction(
-                  adminPrivileges: true,
-                  commands: [
-                    'netsh advfirewall firewall add rule name="LocalSend" dir=in action=allow protocol=TCP localport=${settings.port}',
-                    'netsh advfirewall firewall add rule name="LocalSend" dir=in action=allow protocol=UDP localport=${settings.port}',
-                  ],
-                ),
-              },
+    return UyavaPageLifecycle(
+      nodeId: LocalSendUyava.uiTroubleshootNodeId,
+      child: Scaffold(
+        appBar: basicLocalSendAppbar(t.troubleshootPage.title),
+        body: ResponsiveListView(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 30),
+          children: [
+            Text(t.troubleshootPage.subTitle, textAlign: TextAlign.center),
+            const SizedBox(height: 5),
+            _TroubleshootItem(
+              symptomText: t.troubleshootPage.firewall.symptom,
+              solutionText: t.troubleshootPage.firewall.solution(port: settings.port),
+              primaryButton: _FixButton(
+                label: t.troubleshootPage.fixButton,
+                onTapMap: {
+                  TargetPlatform.windows: _CommandFixAction(
+                    adminPrivileges: true,
+                    commands: [
+                      'netsh advfirewall firewall add rule name="LocalSend" dir=in action=allow protocol=TCP localport=${settings.port}',
+                      'netsh advfirewall firewall add rule name="LocalSend" dir=in action=allow protocol=UDP localport=${settings.port}',
+                    ],
+                  ),
+                },
+              ),
+              secondaryButton: _FixButton(
+                label: t.troubleshootPage.firewall.openFirewall,
+                onTapMap: {
+                  TargetPlatform.windows: _CommandFixAction(
+                    adminPrivileges: false,
+                    commands: ['wf'],
+                  ),
+                  TargetPlatform.macOS: _NativeFixAction(() => macos_channel.openFirewallSettings()),
+                },
+              ),
             ),
-            secondaryButton: _FixButton(
-              label: t.troubleshootPage.firewall.openFirewall,
-              onTapMap: {
-                TargetPlatform.windows: _CommandFixAction(
-                  adminPrivileges: false,
-                  commands: ['wf'],
-                ),
-                TargetPlatform.macOS: _NativeFixAction(() => macos_channel.openFirewallSettings()),
-              },
+            _TroubleshootItem(
+              symptomText: t.troubleshootPage.noDiscovery.symptom,
+              solutionText: t.troubleshootPage.noDiscovery.solution,
             ),
-          ),
-          _TroubleshootItem(
-            symptomText: t.troubleshootPage.noDiscovery.symptom,
-            solutionText: t.troubleshootPage.noDiscovery.solution,
-          ),
-          _TroubleshootItem(
-            symptomText: t.troubleshootPage.noConnection.symptom,
-            solutionText: t.troubleshootPage.noConnection.solution,
-          ),
-        ],
+            _TroubleshootItem(
+              symptomText: t.troubleshootPage.noConnection.symptom,
+              solutionText: t.troubleshootPage.noConnection.solution,
+            ),
+          ],
+        ),
       ),
     );
   }

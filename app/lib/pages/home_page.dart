@@ -11,9 +11,9 @@ import 'package:localsend_app/pages/tabs/receive_tab.dart';
 import 'package:localsend_app/pages/tabs/send_tab.dart';
 import 'package:localsend_app/pages/tabs/settings_tab.dart';
 import 'package:localsend_app/provider/selection/selected_sending_files_provider.dart';
-import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/util/native/cross_file_converters.dart';
 import 'package:localsend_app/util/native/platform_check.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:localsend_app/widget/responsive_builder.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:uyava/uyava.dart';
@@ -72,6 +72,15 @@ class _HomePageState extends State<HomePage> with Refena {
       ref.redux(homePageControllerProvider).dispatch(ChangeTabAction(widget.initialTab));
       await postInit(context, ref, widget.appStart);
     });
+  }
+
+  @override
+  void dispose() {
+    LocalSendUyava.deactivateUiNode(
+      nodeId: LocalSendUyava.uiHomeNodeId,
+      sourceRef: Uyava.caller(),
+    );
+    super.dispose();
   }
 
   @override

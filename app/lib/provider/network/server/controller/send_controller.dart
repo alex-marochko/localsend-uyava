@@ -20,8 +20,10 @@ import 'package:localsend_app/provider/network/server/controller/common.dart';
 import 'package:localsend_app/provider/network/server/server_utils.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
 import 'package:localsend_app/util/simple_server.dart';
+import 'package:localsend_app/uyava/localsend_uyava.dart';
 import 'package:uri_content/uri_content.dart';
 import 'package:uuid/uuid.dart';
+import 'package:uyava/uyava.dart';
 
 const _uuid = Uuid();
 
@@ -292,6 +294,11 @@ class SendController {
       (oldState) => oldState?.copyWith(
         webSendState: webSendState,
       ),
+    );
+    LocalSendUyava.onWebSendReady(
+      fileCount: webSendState.files.length,
+      https: server.getStateOrNull()?.https ?? server.ref.read(settingsProvider).https,
+      sourceRef: Uyava.caller(),
     );
   }
 
