@@ -207,12 +207,6 @@ class LocalSendUyava {
       },
       sourceRef: sourceRef,
     );
-    Uyava.emitEdgeEvent(
-      edge: edgeDiscoveryToHttpId,
-      message: 'Discovery hit ($transport)',
-      severity: UyavaSeverity.info,
-      sourceRef: sourceRef,
-    );
   }
 
   static void onSendSessionCreated({
@@ -264,7 +258,7 @@ class LocalSendUyava {
       chainId: sendChainId,
       stepId: 'prepare_upload',
       attempt: sessionId,
-      edgeId: edgeSendToHttpId,
+      edgeId: edgeSendPrepareToHttpId,
       message: 'Prepare upload accepted',
       tags: <String>[tagSend, tagNetwork],
       payload: <String, dynamic>{
@@ -316,17 +310,17 @@ class LocalSendUyava {
       sourceRef: sourceRef,
     );
     Uyava.emitEdgeEvent(
-      edge: edgeSendToHttpId,
+      edge: edgeSendProviderToUploadIsolatesId,
       message: 'Upload ${file.fileName}',
       severity: UyavaSeverity.info,
       sourceRef: sourceRef,
     );
     _emitChainStep(
-      nodeId: httpClientNodeId,
+      nodeId: uploadIsolatesNodeId,
       chainId: sendFileChainId,
       stepId: 'file_upload_start',
       attempt: file.id,
-      edgeId: edgeSendToHttpId,
+      edgeId: edgeSendProviderToUploadIsolatesId,
       message: 'Uploading ${file.fileName}',
       tags: <String>[tagSend, tagFile, tagNetwork],
       payload: <String, dynamic>{
@@ -534,12 +528,15 @@ class LocalSendUyava {
     String? sourceRef,
   }) {
     if (accepted) {
+      final String nodeId = quickSave ? receiveControllerNodeId : uiReceivePageNodeId;
+      final String stepId = quickSave ? 'auto_accept' : 'user_accept';
+      final String edgeId = quickSave ? edgeReceiveControllerAutoAcceptId : edgeUiToReceiveId;
       _emitChainStep(
-        nodeId: uiReceivePageNodeId,
+        nodeId: nodeId,
         chainId: receiveChainId,
-        stepId: 'user_accept',
+        stepId: stepId,
         attempt: sessionId,
-        edgeId: edgeUiToReceiveId,
+        edgeId: edgeId,
         message: quickSave ? 'Auto-accepted files' : 'User accepted files',
         tags: <String>[tagReceive, tagSession],
         payload: <String, dynamic>{
