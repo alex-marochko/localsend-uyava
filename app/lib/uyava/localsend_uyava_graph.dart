@@ -108,7 +108,7 @@ const String edgeDebugToHttpLogsDebugId = 'edge.ui.debug.http';
 
 const String edgeUiToSendId = 'edge.ui.send_session';
 const String edgeUiToReceiveId = 'edge.ui.receive_session';
-const String edgeReceiveControllerAutoAcceptId = 'edge.transfer.receive.auto_accept';
+const String edgeReceiveDecisionId = 'edge.transfer.receive.accept';
 const String edgeSendPageToProgressId = 'edge.ui.send_page.progress';
 const String edgeReceivePageToProgressId = 'edge.ui.receive_page.progress';
 
@@ -827,7 +827,7 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
     UyavaEdge(id: edgeDebugToHttpLogsDebugId, from: uiDebugNodeId, to: uiHttpLogsDebugNodeId, label: 'open http logs'),
     UyavaEdge(id: edgeUiToSendId, from: uiSendNodeId, to: sendSessionNodeId, label: 'start send session'),
     UyavaEdge(id: edgeUiToReceiveId, from: uiReceivePageNodeId, to: receiveSessionNodeId, label: 'accept receive session'),
-    UyavaEdge(id: edgeReceiveControllerAutoAcceptId, from: receiveControllerNodeId, to: receiveSessionNodeId, label: 'auto-accept receive session'),
+    UyavaEdge(id: edgeReceiveDecisionId, from: receiveControllerNodeId, to: receiveSessionNodeId, label: 'apply receive decision'),
     UyavaEdge(id: edgeSendPageToProgressId, from: uiSendPageNodeId, to: uiProgressNodeId, label: 'open progress'),
     UyavaEdge(id: edgeReceivePageToProgressId, from: uiReceivePageNodeId, to: uiProgressNodeId, label: 'open progress'),
     UyavaEdge(id: edgeSendTabVmToSelectionId, from: sendTabVmNodeId, to: selectedSendingFilesNodeId, label: 'read selected files'),
@@ -960,8 +960,7 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
       tag: 'chain:receive',
       steps: const <UyavaEventChainStep>[
         UyavaEventChainStep(stepId: 'incoming_request', nodeId: receiveSessionNodeId, edgeId: edgeReceiveToHttpId),
-        UyavaEventChainStep(stepId: 'user_accept', nodeId: uiReceivePageNodeId, edgeId: edgeUiToReceiveId),
-        UyavaEventChainStep(stepId: 'auto_accept', nodeId: receiveControllerNodeId, edgeId: edgeReceiveControllerAutoAcceptId),
+        UyavaEventChainStep(stepId: 'accepted', nodeId: receiveControllerNodeId, edgeId: edgeReceiveDecisionId),
         UyavaEventChainStep(stepId: 'transfer_started', nodeId: fileSaverNodeId, edgeId: edgeReceiveToStorageId),
         UyavaEventChainStep(stepId: 'transfer_complete', nodeId: receiveControllerNodeId, edgeId: edgeReceiveToControllerId),
       ],

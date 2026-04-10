@@ -528,20 +528,18 @@ class LocalSendUyava {
     String? sourceRef,
   }) {
     if (accepted) {
-      final String nodeId = quickSave ? receiveControllerNodeId : uiReceivePageNodeId;
-      final String stepId = quickSave ? 'auto_accept' : 'user_accept';
-      final String edgeId = quickSave ? edgeReceiveControllerAutoAcceptId : edgeUiToReceiveId;
       _emitChainStep(
-        nodeId: nodeId,
+        nodeId: receiveControllerNodeId,
         chainId: receiveChainId,
-        stepId: stepId,
+        stepId: 'accepted',
         attempt: sessionId,
-        edgeId: edgeId,
+        edgeId: edgeReceiveDecisionId,
         message: quickSave ? 'Auto-accepted files' : 'User accepted files',
         tags: <String>[tagReceive, tagSession],
         payload: <String, dynamic>{
           'sessionId': sessionId,
           'selectedCount': selectedCount,
+          'acceptMode': quickSave ? 'auto' : 'manual',
           'quickSave': quickSave,
           'metric': _metric(metricSelectedFilesCount, selectedCount),
         },
