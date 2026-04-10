@@ -57,6 +57,7 @@ const String signalingNodeId = 'localsend.network.signaling';
 
 const String transferGroupNodeId = 'localsend.transfer';
 const String sendProviderNodeId = 'localsend.transfer.send_provider';
+const String uploadIsolatesNodeId = 'localsend.transfer.upload_isolates';
 const String receiveControllerNodeId = 'localsend.transfer.receive_controller';
 const String webSendControllerNodeId = 'localsend.transfer.web_send_controller';
 const String sendSessionNodeId = 'localsend.transfer.send_session';
@@ -86,7 +87,7 @@ const String edgeProgressToStateId = 'edge.ui.progress.state';
 const String edgeReceivePageToSelectedFilesId = 'edge.ui.receive_page.selection';
 const String edgeReceiveHistoryPageToHistoryId = 'edge.ui.receive_history_page.history';
 const String edgeDebugPageToDiscoveryLogsId = 'edge.ui.debug.discovery_logs';
-const String edgeDebugPageToSecurityId = 'edge.ui.debug.security';
+const String edgeSecurityDebugToSecurityId = 'edge.ui.security_debug.security';
 const String edgeDebugPageToHttpLogsId = 'edge.ui.debug.http_logs';
 
 const String edgeSendTabToSelectedFilesId = 'edge.ui.send.selected_files';
@@ -107,6 +108,7 @@ const String edgeDebugToHttpLogsDebugId = 'edge.ui.debug.http';
 
 const String edgeUiToSendId = 'edge.ui.send_session';
 const String edgeUiToReceiveId = 'edge.ui.receive_session';
+const String edgeReceiveDecisionId = 'edge.transfer.receive.accept';
 const String edgeSendPageToProgressId = 'edge.ui.send_page.progress';
 const String edgeReceivePageToProgressId = 'edge.ui.receive_page.progress';
 
@@ -126,7 +128,6 @@ const String edgeSettingsControllerToLocalIpId = 'edge.presentation.settings.loc
 const String edgeServerToHttpId = 'edge.network.server.http';
 const String edgeServerToReceiveControllerId = 'edge.network.server.receive_controller';
 const String edgeServerToWebSendControllerId = 'edge.network.server.web_send_controller';
-const String edgeDiscoveryToHttpId = 'edge.network.discovery.http';
 const String edgeSecurityToRustCryptoId = 'edge.network.security.rust_crypto';
 const String edgeSignalingToRustWebrtcId = 'edge.network.signaling.rust_webrtc';
 const String edgeRustBridgeToWebrtcId = 'edge.native.rust_bridge.webrtc';
@@ -135,7 +136,8 @@ const String edgeRustBridgeToLoggingId = 'edge.native.rust_bridge.logging';
 
 const String edgeSendProviderToSessionId = 'edge.transfer.send_provider.session';
 const String edgeReceiveControllerToSessionId = 'edge.transfer.receive_controller.session';
-const String edgeSendToHttpId = 'edge.transfer.send.http';
+const String edgeSendPrepareToHttpId = 'edge.transfer.send.prepare_http';
+const String edgeSendProviderToUploadIsolatesId = 'edge.transfer.send.upload_isolates';
 const String edgeReceiveToHttpId = 'edge.transfer.receive.http';
 const String edgeReceiveToStorageId = 'edge.transfer.receive.storage';
 const String edgeSendToProviderId = 'edge.transfer.send.completion';
@@ -650,6 +652,15 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
       standardType: UyavaStandardType.manager,
     ),
     LocalSendUyavaNodeSpec.standard(
+      id: uploadIsolatesNodeId,
+      label: 'HTTP Upload Isolates',
+      description: 'Background upload workers that stream file bytes to the receiver over HTTP.',
+      parentId: transferGroupNodeId,
+      tags: const <String>[tagTransfer, tagSend, tagNetwork],
+      sourceRef: 'package:common/src/isolate/child/upload_isolate.dart:1:1',
+      standardType: UyavaStandardType.service,
+    ),
+    LocalSendUyavaNodeSpec.standard(
       id: receiveControllerNodeId,
       label: 'Receive Controller',
       description: 'Handles incoming prepare/upload/cancel/show routes and receive-session transitions.',
@@ -797,7 +808,7 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
     UyavaEdge(id: edgeReceivePageToSelectedFilesId, from: uiReceivePageNodeId, to: selectedReceivingFilesNodeId, label: 'edit selected files'),
     UyavaEdge(id: edgeReceiveHistoryPageToHistoryId, from: uiReceiveHistoryPageNodeId, to: receiveHistoryNodeId, label: 'browse history'),
     UyavaEdge(id: edgeDebugPageToDiscoveryLogsId, from: uiDiscoveryDebugNodeId, to: discoveryLogsNodeId, label: 'inspect discovery logs'),
-    UyavaEdge(id: edgeDebugPageToSecurityId, from: uiSecurityDebugNodeId, to: securityNodeId, label: 'inspect certificates'),
+    UyavaEdge(id: edgeSecurityDebugToSecurityId, from: uiSecurityDebugNodeId, to: securityNodeId, label: 'inspect certificates'),
     UyavaEdge(id: edgeDebugPageToHttpLogsId, from: uiHttpLogsDebugNodeId, to: httpLogsNodeId, label: 'inspect http logs'),
     UyavaEdge(id: edgeSendTabToSelectedFilesId, from: uiSendNodeId, to: uiSelectedFilesNodeId, label: 'open selected files'),
     UyavaEdge(id: edgeSendTabToTroubleshootId, from: uiSendNodeId, to: uiTroubleshootNodeId, label: 'open troubleshooting'),
@@ -816,6 +827,7 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
     UyavaEdge(id: edgeDebugToHttpLogsDebugId, from: uiDebugNodeId, to: uiHttpLogsDebugNodeId, label: 'open http logs'),
     UyavaEdge(id: edgeUiToSendId, from: uiSendNodeId, to: sendSessionNodeId, label: 'start send session'),
     UyavaEdge(id: edgeUiToReceiveId, from: uiReceivePageNodeId, to: receiveSessionNodeId, label: 'accept receive session'),
+    UyavaEdge(id: edgeReceiveDecisionId, from: receiveControllerNodeId, to: receiveSessionNodeId, label: 'apply receive decision'),
     UyavaEdge(id: edgeSendPageToProgressId, from: uiSendPageNodeId, to: uiProgressNodeId, label: 'open progress'),
     UyavaEdge(id: edgeReceivePageToProgressId, from: uiReceivePageNodeId, to: uiProgressNodeId, label: 'open progress'),
     UyavaEdge(id: edgeSendTabVmToSelectionId, from: sendTabVmNodeId, to: selectedSendingFilesNodeId, label: 'read selected files'),
@@ -833,7 +845,6 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
     UyavaEdge(id: edgeServerToHttpId, from: serverServiceNodeId, to: httpServerNodeId, label: 'bind server'),
     UyavaEdge(id: edgeServerToReceiveControllerId, from: serverServiceNodeId, to: receiveControllerNodeId, label: 'install receive routes'),
     UyavaEdge(id: edgeServerToWebSendControllerId, from: serverServiceNodeId, to: webSendControllerNodeId, label: 'install web send routes'),
-    UyavaEdge(id: edgeDiscoveryToHttpId, from: nearbyDevicesNodeId, to: httpClientNodeId, label: 'discover via http'),
     UyavaEdge(id: edgeSecurityToRustCryptoId, from: securityNodeId, to: rustCryptoNodeId, label: 'verify certificate'),
     UyavaEdge(id: edgeSignalingToRustWebrtcId, from: signalingNodeId, to: rustWebrtcNodeId, label: 'open rtc signaling'),
     UyavaEdge(id: edgeRustBridgeToWebrtcId, from: rustBridgeNodeId, to: rustWebrtcNodeId, label: 'frb call'),
@@ -841,7 +852,8 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
     UyavaEdge(id: edgeRustBridgeToLoggingId, from: rustBridgeNodeId, to: rustLoggingNodeId, label: 'frb call'),
     UyavaEdge(id: edgeSendProviderToSessionId, from: sendProviderNodeId, to: sendSessionNodeId, label: 'own session state'),
     UyavaEdge(id: edgeReceiveControllerToSessionId, from: receiveControllerNodeId, to: receiveSessionNodeId, label: 'own session state'),
-    UyavaEdge(id: edgeSendToHttpId, from: sendSessionNodeId, to: httpClientNodeId, label: 'prepare / upload'),
+    UyavaEdge(id: edgeSendPrepareToHttpId, from: sendProviderNodeId, to: httpClientNodeId, label: 'prepare upload request'),
+    UyavaEdge(id: edgeSendProviderToUploadIsolatesId, from: sendProviderNodeId, to: uploadIsolatesNodeId, label: 'dispatch file upload'),
     UyavaEdge(id: edgeReceiveToHttpId, from: receiveSessionNodeId, to: httpServerNodeId, label: 'receive upload'),
     UyavaEdge(id: edgeReceiveToStorageId, from: receiveSessionNodeId, to: fileSaverNodeId, label: 'save file'),
     UyavaEdge(id: edgeSendToProviderId, from: sendSessionNodeId, to: sendProviderNodeId, label: 'report completion'),
@@ -937,18 +949,18 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
       tag: 'chain:send',
       steps: const <UyavaEventChainStep>[
         UyavaEventChainStep(stepId: 'session_created', nodeId: sendSessionNodeId, edgeId: edgeUiToSendId),
-        UyavaEventChainStep(stepId: 'prepare_upload', nodeId: httpClientNodeId, edgeId: edgeSendToHttpId),
+        UyavaEventChainStep(stepId: 'prepare_upload', nodeId: httpClientNodeId, edgeId: edgeSendPrepareToHttpId),
         UyavaEventChainStep(stepId: 'transfer_complete', nodeId: sendProviderNodeId, edgeId: edgeSendToProviderId),
       ],
     ),
     LocalSendUyavaEventChainSpec(
       id: receiveChainId,
       label: 'Receive Flow',
-      description: 'Incoming receive request through user approval, file saving, and completion.',
+      description: 'Incoming receive request through manual or automatic acceptance, file saving, and completion.',
       tag: 'chain:receive',
       steps: const <UyavaEventChainStep>[
         UyavaEventChainStep(stepId: 'incoming_request', nodeId: receiveSessionNodeId, edgeId: edgeReceiveToHttpId),
-        UyavaEventChainStep(stepId: 'user_accept', nodeId: uiReceivePageNodeId, edgeId: edgeUiToReceiveId),
+        UyavaEventChainStep(stepId: 'accepted', nodeId: receiveControllerNodeId, edgeId: edgeReceiveDecisionId),
         UyavaEventChainStep(stepId: 'transfer_started', nodeId: fileSaverNodeId, edgeId: edgeReceiveToStorageId),
         UyavaEventChainStep(stepId: 'transfer_complete', nodeId: receiveControllerNodeId, edgeId: edgeReceiveToControllerId),
       ],
@@ -956,10 +968,10 @@ final LocalSendUyavaGraph localSendUyavaGraph = LocalSendUyavaGraph(
     LocalSendUyavaEventChainSpec(
       id: sendFileChainId,
       label: 'Send File Flow',
-      description: 'Per-file upload from HTTP dispatch to session state update.',
+      description: 'Per-file upload from isolate dispatch to session state update.',
       tag: 'chain:send-file',
       steps: const <UyavaEventChainStep>[
-        UyavaEventChainStep(stepId: 'file_upload_start', nodeId: httpClientNodeId, edgeId: edgeSendToHttpId),
+        UyavaEventChainStep(stepId: 'file_upload_start', nodeId: uploadIsolatesNodeId, edgeId: edgeSendProviderToUploadIsolatesId),
         UyavaEventChainStep(stepId: 'file_upload_complete', nodeId: sendProviderNodeId, edgeId: edgeSendToProviderId),
       ],
     ),
